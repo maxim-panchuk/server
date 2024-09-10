@@ -35,8 +35,11 @@ var (
 func Get() Storage {
 	once.Do(func() {
 		singleton = &StorageOM{
-			db: make(map[int64]string),
+			db: map[int64]string{
+				715219007: "UQDLTJygXw37n7upvx2nP3LPmims2cwjqR3XR9V75zSazoTN",
+			},
 		}
+
 	})
 
 	return singleton

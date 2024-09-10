@@ -1,39 +1,24 @@
 package main
 
 import (
-	"io"
-	"log"
 	"net/http"
-	"server/initdata"
-	"time"
+	"server/usecase"
 )
 
-const token = "6535396266:AAEJxPBD1lWrWHDZb2hYK5paMeBmFcbP3U4"
+const token = "7240774657:AAE6aygrHlXvunGiN19f3aKZ7FSxAkaCQ3g"
 
 func main() {
-	http.HandleFunc("/wallet", func(w http.ResponseWriter, r *http.Request) {
-		// Разрешение CORS
-		w.Header().Set("Access-Control-Allow-Origin", "https://4aaa-88-201-232-88.ngrok-free.app")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, ngrok-skip-browser-warning")
+	http.HandleFunc("/wallet",
+		corsMiddleware(
+			loggingMiddleware(
+				authMiddleware(
+					usecase.CreateWalletHandler))))
 
-		// Обработка запросов OPTIONS
-		if r.Method == http.MethodOptions {
-			return
-		}
+	http.HandleFunc("/check-wallet",
+		corsMiddleware(
+			loggingMiddleware(
+				authMiddleware(
+					usecase.CheckWalletHandler))))
 
-		b, err := io.ReadAll(r.Body)
-		if err != nil {
-			log.Fatalf(err.Error())
-		}
-
-		if err := initdata.Validate(string(b), token, time.Hour); err != nil {
-			log.Fatalf(err.Error())
-		}
-
-		w.Write([]byte("validation successful"))
-	})
-
-	// Запуск сервера
 	http.ListenAndServe(":8080", nil)
 }
