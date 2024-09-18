@@ -8,12 +8,6 @@ import (
 const token = "7240774657:AAE6aygrHlXvunGiN19f3aKZ7FSxAkaCQ3g"
 
 func main() {
-	http.HandleFunc("/wallet",
-		corsMiddleware(
-			loggingMiddleware(
-				authMiddleware(
-					usecase.CreateWalletHandler))))
-
 	http.HandleFunc("/check-wallet",
 		corsMiddleware(
 			loggingMiddleware(

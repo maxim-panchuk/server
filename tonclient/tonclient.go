@@ -2,6 +2,7 @@ package tonclient
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/xssnick/tonutils-go/address"
 	"github.com/xssnick/tonutils-go/liteclient"
@@ -10,11 +11,20 @@ import (
 	"log"
 )
 
+const (
+	_testnet = "https://ton.org/testnet-global.config.json"
+	_mainnet = "https://ton.org/global.config.json"
+)
+
+var (
+	ErrWalletIsNotActive = errors.New("wallet is not active")
+)
+
 func GetBalance(ctx context.Context, clientAddress string) (string, error) {
 	client := liteclient.NewConnectionPool()
 
 	err := client.AddConnectionsFromConfigUrl(context.Background(),
-		"https://ton.org/global.config.json")
+		_testnet)
 	if err != nil {
 		return "", fmt.Errorf("connection err: %w", err)
 	}
@@ -24,6 +34,7 @@ func GetBalance(ctx context.Context, clientAddress string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("get block err: %w", err)
 	}
+
 	addr := address.MustParseAddr(clientAddress)
 
 	res, err := api.WaitForBlock(b.SeqNo).GetAccount(ctx, b, addr)
@@ -31,13 +42,17 @@ func GetBalance(ctx context.Context, clientAddress string) (string, error) {
 		return "", fmt.Errorf("get account err: %w", err)
 	}
 
-	return res.State.Balance.String(), nil
+	if res.IsActive {
+		return res.State.Balance.String(), nil
+	}
+
+	return "0", ErrWalletIsNotActive
 }
 
 func CreateWallet(ctx context.Context) (string, error) {
 	client := liteclient.NewConnectionPool()
 	cfg, err := liteclient.GetConfigFromUrl(context.Background(),
-		"https://ton.org/global.config.json")
+		_testnet)
 	if err != nil {
 		return "", fmt.Errorf("get config err: %w", err)
 	}
@@ -58,7 +73,6 @@ func CreateWallet(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("FromSeed err: %w", err)
 	}
-
 	log.Println("wallet address:", w.WalletAddress())
 
 	return w.WalletAddress().String(), nil

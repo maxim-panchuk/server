@@ -21,9 +21,9 @@ func loggingMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "https://3e90-88-201-232-88.ngrok-free.app")
+		w.Header().Set("Access-Control-Allow-Origin", "https://oy4r76-162-55-38-246.ru.tuna.am")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, ngrok-skip-browser-warning")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
 		if r.Method == http.MethodOptions {
 			return

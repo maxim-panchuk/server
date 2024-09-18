@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -19,8 +20,7 @@ func CheckWalletHandler(w http.ResponseWriter, r *http.Request) {
 
 	data, err := initdata.Parse(string(b))
 	if err != nil {
-		w.Write([]byte("invalid init data"))
-		return
+		log.Fatalln(err)
 	}
 
 	type GetWalletResp struct {
@@ -33,38 +33,51 @@ func CheckWalletHandler(w http.ResponseWriter, r *http.Request) {
 		WalletExists: false,
 	}
 
-	errResp, err := json.Marshal(resp)
+	result, err := json.Marshal(resp)
 	if err != nil {
-		log.Println(err.Error())
-		w.Write([]byte(err.Error()))
-		return
+		log.Fatalln(err)
 	}
 
-	address, err := wallet.Get().GetAddressByUserID(data.User.ID)
+	ctx := context.Background()
+	var address string
+	address, err = wallet.GetStorageDB().GetAddressByUserID(ctx, data.User.ID)
 	if err != nil {
-		log.Println(err.Error())
-		w.Write(errResp)
-		return
+		if errors.Is(err, wallet.ErrNoSuchUser) {
+			address, err = createWallet(ctx, data.User.ID)
+			if err != nil {
+				log.Fatalln(err)
+			}
+		} else {
+			log.Fatalln(err)
+		}
 	}
 
-	balance, err := tonclient.GetBalance(context.Background(), address)
-	if err != nil {
-		log.Println(err.Error())
-		w.Write(errResp)
-		return
+	balance, err := tonclient.GetBalance(ctx, address)
+	if err != nil && !errors.Is(err, tonclient.ErrWalletIsNotActive) {
+		log.Fatalln(err)
 	}
 
-	resp.WalletExists = true
 	resp.Balance = balance
 	resp.Address = address
+	resp.WalletExists = true
 
-	payload, err := json.Marshal(resp)
+	result, err = json.Marshal(resp)
 	if err != nil {
-		log.Println(err.Error())
-		w.Write(errResp)
-		return
+		log.Fatalln(err)
 	}
 
-	w.Write(payload)
-	return
+	w.Write(result)
+}
+
+func createWallet(ctx context.Context, userID int64) (string, error) {
+	address, err := tonclient.CreateWallet(ctx)
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+
+	if err := wallet.GetStorageDB().SaveWalletAddress(ctx, userID, address); err != nil {
+		log.Fatalf(err.Error())
+	}
+
+	return address, nil
 }
